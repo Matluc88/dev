@@ -19,11 +19,11 @@ services:
     buildCommand: "cd kicad-ai-frontend && npm install && npm run build"
     staticPublishPath: kicad-ai-frontend/dist
     envVars:
-      - key: VITE_API_URL
+      - key: VITE_API_HOST
         fromService:
           type: web
           name: kicad-ai-backend
-          property: url
+          property: host
     routes:
       - type: rewrite
         source: /*

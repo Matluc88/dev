@@ -7,7 +7,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import './App.css'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.VITE_API_HOST
+    ? `https://${import.meta.env.VITE_API_HOST}`
+    : 'http://localhost:8000')
 
 interface CircuitSpec {
   node_type: string

@@ -69,7 +69,7 @@ render blueprint launch
 - **Runtime**: Static site
 - **Build Command**: `npm install && npm run build`
 - **Publish Path**: `kicad-ai-frontend/dist`
-- **Environment Variable**: `VITE_API_URL` (automatically set from backend service)
+- **Environment Variable**: `VITE_API_HOST` (automatically set from backend service host, frontend constructs full HTTPS URL)
 
 ## Environment Variables
 
@@ -78,7 +78,8 @@ render blueprint launch
 - `PYTHON_VERSION`: 3.12.0 (automatically set)
 
 ### Frontend
-- `VITE_API_URL`: Backend API URL (automatically set from backend service)
+- `VITE_API_HOST`: Backend API hostname (automatically set from backend service, e.g., `kicad-ai-backend.onrender.com`)
+- `VITE_API_URL`: Optional manual override for backend URL (if not set, constructed from `VITE_API_HOST`)
 
 ## Monitoring
 
@@ -102,8 +103,9 @@ Render automatically deploys when you push to your main branch. To deploy manual
 
 ### Frontend can't connect to backend
 - Verify backend service is running and healthy
-- Check that `VITE_API_URL` is set correctly
+- Check that `VITE_API_HOST` is set correctly (should be the backend hostname)
 - Check CORS settings in backend (already configured for all origins)
+- If needed, you can manually set `VITE_API_URL` in the Render dashboard as an override
 
 ### Build failures
 - Check that all dependencies are listed in `pyproject.toml` (backend)
@@ -125,8 +127,8 @@ poetry run uvicorn app.main:app --reload
 ```bash
 cd kicad-ai-frontend
 npm install
-# Set backend URL (optional, defaults to http://localhost:8000)
-export VITE_API_URL=http://localhost:8000
+# Backend URL defaults to http://localhost:8000 for local development
+# You can override with VITE_API_URL or VITE_API_HOST if needed
 npm run dev
 ```
 
