@@ -134,6 +134,124 @@ COMPONENT_CATALOG = {
             ComponentPin(number="2", name="~", role=PinRole.SIGNAL_OUT),
         ]
     ),
+    
+    "IRLZ44N_mosfet": Component(
+        id="IRLZ44N_mosfet",
+        category=ComponentCategory.ACTUATOR,
+        name="IRLZ44N N-Channel MOSFET",
+        symbol="Device:Q_NMOS_GDS",
+        footprint="Package_TO_SOT_THT:TO-220-3_Vertical",
+        description="Logic-level N-channel MOSFET, 55V 47A",
+        width_mm=10.0,
+        height_mm=15.0,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="G", role=PinRole.SIGNAL_IN),
+            ComponentPin(number="2", name="D", role=PinRole.POWER_OUT),
+            ComponentPin(number="3", name="S", role=PinRole.GROUND),
+        ]
+    ),
+    
+    "relay_12V": Component(
+        id="relay_12V",
+        category=ComponentCategory.ACTUATOR,
+        name="Relay 12V SPDT",
+        symbol="Relay:Relay_SPDT",
+        footprint="Relay_THT:Relay_SPDT_Finder_40.52",
+        description="12V SPDT relay, 10A contacts",
+        width_mm=20.0,
+        height_mm=15.0,
+        typical_current_ma=80,
+        pins=[
+            ComponentPin(number="1", name="COIL+", role=PinRole.POWER_IN, voltage_min=12.0, voltage_max=12.0, current_ma=80),
+            ComponentPin(number="2", name="COIL-", role=PinRole.GROUND),
+            ComponentPin(number="3", name="COM", role=PinRole.SIGNAL_IN),
+            ComponentPin(number="4", name="NO", role=PinRole.SIGNAL_OUT),
+            ComponentPin(number="5", name="NC", role=PinRole.SIGNAL_OUT),
+        ]
+    ),
+    
+    "linear_actuator_12V": Component(
+        id="linear_actuator_12V",
+        category=ComponentCategory.ACTUATOR,
+        name="Linear Actuator 12V",
+        symbol="Motor:Motor_DC",
+        footprint="Connector:PinHeader_1x02_P2.54mm_Vertical",
+        description="12V linear actuator, 18cm stroke, 2A max",
+        width_mm=10.0,
+        height_mm=10.0,
+        typical_current_ma=2000,
+        pins=[
+            ComponentPin(number="1", name="+", role=PinRole.POWER_IN, voltage_min=12.0, voltage_max=12.0, current_ma=2000),
+            ComponentPin(number="2", name="-", role=PinRole.GROUND),
+        ]
+    ),
+    
+    "terminal_block_2pin": Component(
+        id="terminal_block_2pin",
+        category=ComponentCategory.CONNECTOR,
+        name="Terminal Block 2-pin",
+        symbol="Connector:Screw_Terminal_01x02",
+        footprint="TerminalBlock:TerminalBlock_bornier-2_P5.08mm",
+        description="2-pin screw terminal block, 5.08mm pitch",
+        width_mm=10.16,
+        height_mm=8.5,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="Pin_1", role=PinRole.POWER_IN),
+            ComponentPin(number="2", name="Pin_2", role=PinRole.GROUND),
+        ]
+    ),
+    
+    "LM7805_regulator": Component(
+        id="LM7805_regulator",
+        category=ComponentCategory.CONNECTOR,
+        name="LM7805 5V Regulator",
+        symbol="Regulator_Linear:L7805",
+        footprint="Package_TO_SOT_THT:TO-220-3_Vertical",
+        description="5V 1.5A linear voltage regulator",
+        width_mm=10.0,
+        height_mm=15.0,
+        typical_current_ma=5,
+        pins=[
+            ComponentPin(number="1", name="VIN", role=PinRole.POWER_IN, voltage_min=7.0, voltage_max=35.0),
+            ComponentPin(number="2", name="GND", role=PinRole.GROUND),
+            ComponentPin(number="3", name="VOUT", role=PinRole.POWER_OUT, voltage_min=5.0, voltage_max=5.0, current_ma=1500),
+        ]
+    ),
+    
+    "diode_1N4007": Component(
+        id="diode_1N4007",
+        category=ComponentCategory.CONNECTOR,
+        name="1N4007 Diode",
+        symbol="Device:D",
+        footprint="Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal",
+        description="1A 1000V rectifier diode (flyback protection)",
+        width_mm=10.16,
+        height_mm=2.5,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="K", role=PinRole.GROUND),
+            ComponentPin(number="2", name="A", role=PinRole.SIGNAL_IN),
+        ]
+    ),
+    
+    "LED_bicolor": Component(
+        id="LED_bicolor",
+        category=ComponentCategory.LED,
+        name="LED Bicolor Red/Green",
+        symbol="Device:LED_Dual_2pin",
+        footprint="LED_THT:LED_D5.0mm-3",
+        description="Bicolor LED red/green common cathode",
+        width_mm=5.0,
+        height_mm=5.0,
+        typical_current_ma=40,
+        pins=[
+            ComponentPin(number="1", name="RED", role=PinRole.SIGNAL_IN, current_ma=20),
+            ComponentPin(number="2", name="K", role=PinRole.GROUND),
+            ComponentPin(number="3", name="GREEN", role=PinRole.SIGNAL_IN, current_ma=20),
+        ]
+    ),
 }
 
 

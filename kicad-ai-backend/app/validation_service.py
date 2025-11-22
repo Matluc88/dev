@@ -66,16 +66,56 @@ class ValidationService:
         
         # Validate LEDs (need GPIO pins)
         for i, led in enumerate(spec.status_leds):
-            pin = self._assign_gpio_pin(esp32, f"LED {led.color}")
-            if not pin:
-                errors.append(f"Pin GPIO insufficienti per LED {led.color}")
+            if led.color == "bicolore":
+                # Bicolor LED needs 2 GPIO pins
+                red_pin = self._assign_gpio_pin(esp32, f"LED bicolore RED")
+                green_pin = self._assign_gpio_pin(esp32, f"LED bicolore GREEN")
+                if not red_pin or not green_pin:
+                    errors.append(f"Pin GPIO insufficienti per LED bicolore")
+                else:
+                    bicolor_comp = get_component("LED_bicolor")
+                    if bicolor_comp:
+                        self.total_current_ma += bicolor_comp.typical_current_ma
             else:
-                led_comp = get_component("LED_5mm")
-                if led_comp:
-                    self.total_current_ma += led_comp.typical_current_ma
+                pin = self._assign_gpio_pin(esp32, f"LED {led.color}")
+                if not pin:
+                    errors.append(f"Pin GPIO insufficienti per LED {led.color}")
+                else:
+                    led_comp = get_component("LED_5mm")
+                    if led_comp:
+                        self.total_current_ma += led_comp.typical_current_ma
+        
+        # Validate high-power actuators (need GPIO for control + driver)
+        for i, actuator in enumerate(spec.high_power_actuators):
+            pin = self._assign_gpio_pin(esp32, f"Attuatore {actuator.kind} controllo")
+            if not pin:
+                errors.append(f"Pin GPIO insufficienti per controllo attuatore {actuator.kind}")
+            
+            # Add driver current to budget
+            if actuator.driver_type == "mosfet":
+                # MOSFET uses negligible current from GPIO
+                pass
+            elif actuator.driver_type == "relay":
+                relay_comp = get_component("relay_12V")
+                if relay_comp:
+                    self.total_current_ma += relay_comp.typical_current_ma
         
         # Add ESP32 base current
         self.total_current_ma += esp32.typical_current_ma
+        
+        # Validate power domains
+        if spec.power_domains:
+            for domain in spec.power_domains:
+                if domain.role == "actuator":
+                    # Check actuator power budget
+                    actuator_current = sum(a.max_current_ma for a in spec.high_power_actuators)
+                    if actuator_current > domain.max_current_ma:
+                        errors.append(
+                            f"Consumo attuatori ({actuator_current}mA) supera il budget del dominio {domain.name} ({domain.max_current_ma}mA)"
+                        )
+                        warnings.append(
+                            f"Considera un alimentatore più potente per il dominio {domain.name} (almeno {int(actuator_current * 1.2)}mA con margine 20%)"
+                        )
         
         # Check power budget
         if self.total_current_ma > spec.power.max_current_ma:

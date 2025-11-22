@@ -193,56 +193,301 @@ class GenerationService:
         
         # Add status LEDs
         for i, led in enumerate(spec.status_leds):
-            # Find GPIO pin
+            if led.color == "bicolore":
+                # Bicolor LED needs 2 GPIO pins
+                gpio_pins = find_available_gpio_pins(spec.esp32_model, used_pins)
+                if len(gpio_pins) < 2:
+                    continue
+                red_pin = gpio_pins[0]
+                green_pin = gpio_pins[1]
+                used_pins.extend([red_pin.number, green_pin.number])
+                
+                bicolor_comp = get_component("LED_bicolor")
+                resistor_comp = get_component("resistor_330")
+                
+                if not bicolor_comp or not resistor_comp:
+                    continue
+                
+                # Create bicolor LED
+                led_ref = f"D{component_counter['D']}"
+                component_counter['D'] += 1
+                
+                led_component = Component(
+                    reference=led_ref,
+                    value="LED_Bicolor",
+                    footprint=bicolor_comp.footprint,
+                    symbol=bicolor_comp.symbol,
+                    x=70.0,
+                    y=10.0 + (i * 10.0)
+                )
+                netlist.add_component(led_component)
+                
+                # Create resistors for both colors
+                res_red_ref = f"R{component_counter['R']}"
+                component_counter['R'] += 1
+                res_green_ref = f"R{component_counter['R']}"
+                component_counter['R'] += 1
+                
+                resistor_red = Component(
+                    reference=res_red_ref,
+                    value="330",
+                    footprint=resistor_comp.footprint,
+                    symbol=resistor_comp.symbol,
+                    x=75.0,
+                    y=8.0 + (i * 10.0)
+                )
+                netlist.add_component(resistor_red)
+                
+                resistor_green = Component(
+                    reference=res_green_ref,
+                    value="330",
+                    footprint=resistor_comp.footprint,
+                    symbol=resistor_comp.symbol,
+                    x=75.0,
+                    y=12.0 + (i * 10.0)
+                )
+                netlist.add_component(resistor_green)
+                
+                # Connect bicolor LED
+                netlist.connect(f"LED_RED", led_ref, "1")
+                netlist.connect(f"LED_RED", res_red_ref, "1")
+                netlist.connect(f"LED_RED_GPIO", res_red_ref, "2")
+                netlist.connect(f"LED_RED_GPIO", "U1", red_pin.number)
+                
+                netlist.connect("GND", led_ref, "2")
+                
+                netlist.connect(f"LED_GREEN", led_ref, "3")
+                netlist.connect(f"LED_GREEN", res_green_ref, "1")
+                netlist.connect(f"LED_GREEN_GPIO", res_green_ref, "2")
+                netlist.connect(f"LED_GREEN_GPIO", "U1", green_pin.number)
+            else:
+                # Standard single-color LED
+                gpio_pins = find_available_gpio_pins(spec.esp32_model, used_pins)
+                if not gpio_pins:
+                    continue
+                gpio_pin = gpio_pins[0]
+                used_pins.append(gpio_pin.number)
+                
+                led_comp = get_component("LED_5mm")
+                resistor_comp = get_component("resistor_330")
+                
+                if not led_comp or not resistor_comp:
+                    continue
+                
+                # Create LED
+                led_ref = f"D{component_counter['D']}"
+                component_counter['D'] += 1
+                
+                led_component = Component(
+                    reference=led_ref,
+                    value=f"LED_{led.color}",
+                    footprint=led_comp.footprint,
+                    symbol=led_comp.symbol,
+                    x=70.0,
+                    y=10.0 + (i * 10.0)
+                )
+                netlist.add_component(led_component)
+                
+                # Create resistor
+                res_ref = f"R{component_counter['R']}"
+                component_counter['R'] += 1
+                
+                resistor = Component(
+                    reference=res_ref,
+                    value="330",
+                    footprint=resistor_comp.footprint,
+                    symbol=resistor_comp.symbol,
+                    x=75.0,
+                    y=10.0 + (i * 10.0)
+                )
+                netlist.add_component(resistor)
+                
+                # Connect LED and resistor
+                netlist.connect(f"LED{i+1}_ANODE", led_ref, "2")
+                netlist.connect(f"LED{i+1}_ANODE", res_ref, "1")
+                netlist.connect(f"LED{i+1}_GPIO", res_ref, "2")
+                netlist.connect(f"LED{i+1}_GPIO", "U1", gpio_pin.number)
+                netlist.connect("GND", led_ref, "1")
+        
+        # Add power connectors and domains
+        if spec.power_connectors:
+            for connector in spec.power_connectors:
+                term_comp = get_component("terminal_block_2pin")
+                if not term_comp:
+                    continue
+                
+                term_ref = f"J{component_counter['J']}"
+                component_counter['J'] += 1
+                
+                terminal = Component(
+                    reference=term_ref,
+                    value=f"{connector.name}_{connector.voltage}V",
+                    footprint=term_comp.footprint,
+                    symbol=term_comp.symbol,
+                    x=10.0,
+                    y=80.0
+                )
+                netlist.add_component(terminal)
+                
+                # Connect to appropriate power net
+                if connector.voltage == 12.0:
+                    netlist.connect("VIN_12V", term_ref, "1")
+                    netlist.connect("GND", term_ref, "2")
+                elif connector.voltage == 5.0:
+                    netlist.connect("VLOGIC_5V", term_ref, "1")
+                    netlist.connect("GND", term_ref, "2")
+        
+        # Add voltage regulator if we have 12V domain
+        if spec.power_domains:
+            has_12v = any(d.voltage == 12.0 for d in spec.power_domains)
+            has_5v_logic = any(d.voltage == 5.0 and d.role == "logic" for d in spec.power_domains)
+            
+            if has_12v and has_5v_logic:
+                reg_comp = get_component("LM7805_regulator")
+                if reg_comp:
+                    reg_ref = f"U{component_counter['U']}"
+                    component_counter['U'] += 1
+                    
+                    regulator = Component(
+                        reference=reg_ref,
+                        value="LM7805",
+                        footprint=reg_comp.footprint,
+                        symbol=reg_comp.symbol,
+                        x=30.0,
+                        y=80.0
+                    )
+                    netlist.add_component(regulator)
+                    
+                    # Connect regulator
+                    netlist.connect("VIN_12V", reg_ref, "1")
+                    netlist.connect("GND", reg_ref, "2")
+                    netlist.connect("VLOGIC_5V", reg_ref, "3")
+        
+        # Add high-power actuators with drivers
+        for i, actuator in enumerate(spec.high_power_actuators):
+            # Find GPIO pin for control
             gpio_pins = find_available_gpio_pins(spec.esp32_model, used_pins)
             if not gpio_pins:
                 continue
             gpio_pin = gpio_pins[0]
             used_pins.append(gpio_pin.number)
             
-            led_comp = get_component("LED_5mm")
-            resistor_comp = get_component("resistor_330")
+            if actuator.driver_type == "mosfet":
+                # Add MOSFET driver circuit
+                mosfet_comp = get_component("IRLZ44N_mosfet")
+                diode_comp = get_component("diode_1N4007")
+                actuator_comp = get_component("linear_actuator_12V")
+                
+                if not mosfet_comp or not diode_comp or not actuator_comp:
+                    continue
+                
+                # Create MOSFET
+                mosfet_ref = f"Q{component_counter.get('Q', 1)}"
+                component_counter['Q'] = component_counter.get('Q', 1) + 1
+                
+                mosfet = Component(
+                    reference=mosfet_ref,
+                    value="IRLZ44N",
+                    footprint=mosfet_comp.footprint,
+                    symbol=mosfet_comp.symbol,
+                    x=30.0,
+                    y=40.0 + (i * 20.0)
+                )
+                netlist.add_component(mosfet)
+                
+                # Create flyback diode
+                diode_ref = f"D{component_counter['D']}"
+                component_counter['D'] += 1
+                
+                diode = Component(
+                    reference=diode_ref,
+                    value="1N4007",
+                    footprint=diode_comp.footprint,
+                    symbol=diode_comp.symbol,
+                    x=35.0,
+                    y=40.0 + (i * 20.0)
+                )
+                netlist.add_component(diode)
+                
+                # Create actuator connector
+                act_ref = f"J{component_counter['J']}"
+                component_counter['J'] += 1
+                
+                actuator_connector = Component(
+                    reference=act_ref,
+                    value=f"Actuator_{i+1}",
+                    footprint=actuator_comp.footprint,
+                    symbol=actuator_comp.symbol,
+                    x=40.0,
+                    y=40.0 + (i * 20.0)
+                )
+                netlist.add_component(actuator_connector)
+                
+                # Connect MOSFET driver circuit
+                netlist.connect(f"ACTUATOR{i+1}_CTRL", "U1", gpio_pin.number)
+                netlist.connect(f"ACTUATOR{i+1}_CTRL", mosfet_ref, "1")  # Gate
+                netlist.connect("GND", mosfet_ref, "3")  # Source
+                netlist.connect(f"ACTUATOR{i+1}_SWITCHED", mosfet_ref, "2")  # Drain
+                netlist.connect(f"ACTUATOR{i+1}_SWITCHED", act_ref, "2")  # Actuator -
+                netlist.connect("VIN_12V", act_ref, "1")  # Actuator +
+                
+                # Connect flyback diode (across actuator)
+                netlist.connect("VIN_12V", diode_ref, "2")  # Anode to +12V
+                netlist.connect(f"ACTUATOR{i+1}_SWITCHED", diode_ref, "1")  # Cathode to switched side
             
-            if not led_comp or not resistor_comp:
-                continue
-            
-            # Create LED
-            led_ref = f"D{component_counter['D']}"
-            component_counter['D'] += 1
-            
-            led_component = Component(
-                reference=led_ref,
-                value=f"LED_{led.color}",
-                footprint=led_comp.footprint,
-                symbol=led_comp.symbol,
-                x=70.0,
-                y=10.0 + (i * 10.0)
-            )
-            netlist.add_component(led_component)
-            
-            # Create resistor
-            res_ref = f"R{component_counter['R']}"
-            component_counter['R'] += 1
-            
-            resistor = Component(
-                reference=res_ref,
-                value="330",
-                footprint=resistor_comp.footprint,
-                symbol=resistor_comp.symbol,
-                x=75.0,
-                y=10.0 + (i * 10.0)
-            )
-            netlist.add_component(resistor)
-            
-            # Connect LED and resistor
-            netlist.connect(f"LED{i+1}_ANODE", led_ref, "2")
-            netlist.connect(f"LED{i+1}_ANODE", res_ref, "1")
-            netlist.connect(f"LED{i+1}_GPIO", res_ref, "2")
-            netlist.connect(f"LED{i+1}_GPIO", "U1", gpio_pin.number)
-            netlist.connect("GND", led_ref, "1")
+            elif actuator.driver_type == "relay":
+                # Add relay driver circuit
+                relay_comp = get_component("relay_12V")
+                actuator_comp = get_component("linear_actuator_12V")
+                
+                if not relay_comp or not actuator_comp:
+                    continue
+                
+                # Create relay
+                relay_ref = f"K{component_counter.get('K', 1)}"
+                component_counter['K'] = component_counter.get('K', 1) + 1
+                
+                relay = Component(
+                    reference=relay_ref,
+                    value="Relay_12V",
+                    footprint=relay_comp.footprint,
+                    symbol=relay_comp.symbol,
+                    x=30.0,
+                    y=40.0 + (i * 20.0)
+                )
+                netlist.add_component(relay)
+                
+                # Create actuator connector
+                act_ref = f"J{component_counter['J']}"
+                component_counter['J'] += 1
+                
+                actuator_connector = Component(
+                    reference=act_ref,
+                    value=f"Actuator_{i+1}",
+                    footprint=actuator_comp.footprint,
+                    symbol=actuator_comp.symbol,
+                    x=40.0,
+                    y=40.0 + (i * 20.0)
+                )
+                netlist.add_component(actuator_connector)
+                
+                # Connect relay
+                netlist.connect(f"ACTUATOR{i+1}_CTRL", "U1", gpio_pin.number)
+                netlist.connect(f"ACTUATOR{i+1}_CTRL", relay_ref, "1")  # Coil+
+                netlist.connect("GND", relay_ref, "2")  # Coil-
+                netlist.connect("VIN_12V", relay_ref, "3")  # COM
+                netlist.connect(f"ACTUATOR{i+1}_SWITCHED", relay_ref, "4")  # NO
+                netlist.connect(f"ACTUATOR{i+1}_SWITCHED", act_ref, "1")  # Actuator +
+                netlist.connect("GND", act_ref, "2")  # Actuator -
         
         # Connect ESP32 power
-        netlist.connect("VCC", "U1", "1")  # 3V3 out
+        if spec.power_domains and any(d.voltage == 5.0 and d.role == "logic" for d in spec.power_domains):
+            # Use 5V logic rail
+            netlist.connect("VLOGIC_5V", "U1", "16")  # VIN
+        else:
+            # Use standard VCC
+            netlist.connect("VCC", "U1", "1")  # 3V3 out
+        
         netlist.connect("GND", "U1", "14")
         netlist.connect("GND", "U1", "17")
         

@@ -70,6 +70,28 @@ class LEDSpec(BaseModel):
     role: str = "status"
 
 
+class PowerDomain(BaseModel):
+    name: str
+    voltage: float
+    max_current_ma: int
+    role: str = "logic"
+
+
+class HighPowerActuator(BaseModel):
+    kind: str
+    model: Optional[str] = None
+    supply_voltage: float = 12.0
+    max_current_ma: int = 2000
+    driver_type: str = "mosfet"
+    control_signal: str = "gpio"
+
+
+class PowerConnector(BaseModel):
+    name: str
+    voltage: float
+    connector_type: str = "terminal_block"
+
+
 class PowerSpec(BaseModel):
     supply_voltage: float = 5.0
     max_current_ma: int = 2000
@@ -91,6 +113,9 @@ class CircuitSpec(BaseModel):
     status_leds: List[LEDSpec] = []
     clarification_questions: List[str] = []
     assumptions_made: List[str] = []
+    power_domains: List[PowerDomain] = []
+    high_power_actuators: List[HighPowerActuator] = []
+    power_connectors: List[PowerConnector] = []
 
 
 class ValidationResult(BaseModel):
