@@ -117,8 +117,13 @@ class GenerateRequest(BaseModel):
     project_name: str = "circuit"
 
 
+class GeneratedFile(BaseModel):
+    filename: str
+    content: str
+
+
 class GenerateResponse(BaseModel):
     success: bool
-    files: Dict[str, str] = {}
+    files: Dict[str, GeneratedFile] = {}
     validation: ValidationResult
     message: str = ""
