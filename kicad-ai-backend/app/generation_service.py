@@ -190,6 +190,71 @@ class GenerationService:
                     netlist.connect("GND", ref, "4")
                     netlist.connect(f"ULTRA{i+1}_TRIG", "U1", trig_pin.number)
                     netlist.connect(f"ULTRA{i+1}_ECHO", "U1", echo_pin.number)
+            
+            elif sensor.kind in ["microphone", "microfono", "audio", "MAX9814"]:
+                mic_comp = get_component("MAX9814_microphone")
+                jst_comp = get_component("JST_XH_3pin")
+                bypass_cap = get_component("capacitor_100nF")
+                
+                if not mic_comp or not jst_comp:
+                    continue
+                
+                for i in range(sensor.count):
+                    # Find ADC-capable GPIO pin (GPIO34, GPIO35, GPIO36)
+                    gpio_pins = find_available_gpio_pins(spec.esp32_model, used_pins)
+                    adc_pin = None
+                    for pin in gpio_pins:
+                        if pin.name in ["IO34", "IO35", "IO36", "VP", "VN"]:
+                            adc_pin = pin
+                            break
+                    
+                    if not adc_pin:
+                        # Fallback to any GPIO if no ADC pins available
+                        if gpio_pins:
+                            adc_pin = gpio_pins[0]
+                        else:
+                            continue
+                    
+                    used_pins.append(adc_pin.number)
+                    
+                    # Create JST connector for microphone
+                    jst_ref = f"J{component_counter['J']}"
+                    component_counter['J'] += 1
+                    
+                    mic_connector = Component(
+                        reference=jst_ref,
+                        value=f"MIC_IN_{i+1}",
+                        footprint=jst_comp.footprint,
+                        symbol=jst_comp.symbol,
+                        x=10.0,
+                        y=50.0 + (i * 15.0)
+                    )
+                    netlist.add_component(mic_connector)
+                    
+                    # Add bypass capacitor for microphone
+                    if bypass_cap:
+                        cap_ref = f"C{component_counter.get('C', 1)}"
+                        component_counter['C'] = component_counter.get('C', 1) + 1
+                        
+                        bypass = Component(
+                            reference=cap_ref,
+                            value="100nF",
+                            footprint=bypass_cap.footprint,
+                            symbol=bypass_cap.symbol,
+                            x=15.0,
+                            y=50.0 + (i * 15.0)
+                        )
+                        netlist.add_component(bypass)
+                        
+                        # Connect bypass capacitor
+                        netlist.connect("VCC", cap_ref, "1")
+                        netlist.connect("GND", cap_ref, "2")
+                    
+                    # Connect microphone
+                    netlist.connect("VCC", jst_ref, "1")
+                    netlist.connect("GND", jst_ref, "2")
+                    netlist.connect(f"MIC{i+1}_OUT", jst_ref, "3")
+                    netlist.connect(f"MIC{i+1}_OUT", "U1", adc_pin.number)
         
         # Add status LEDs
         for i, led in enumerate(spec.status_leds):
@@ -373,12 +438,24 @@ class GenerationService:
             used_pins.append(gpio_pin.number)
             
             if actuator.driver_type == "mosfet":
-                # Add MOSFET driver circuit
+                # Add MOSFET driver circuit with gate resistors
                 mosfet_comp = get_component("IRLZ44N_mosfet")
                 diode_comp = get_component("diode_1N4007")
-                actuator_comp = get_component("linear_actuator_12V")
+                gate_series_res = get_component("resistor_220")
+                gate_pulldown_res = get_component("resistor_100k")
                 
-                if not mosfet_comp or not diode_comp or not actuator_comp:
+                # Determine if this is a LED strip or other actuator
+                if actuator.kind in ["led_strip", "LED_strip", "strip_LED"]:
+                    actuator_comp = get_component("LED_strip_5V")
+                    jst_comp = get_component("JST_XH_2pin")
+                    power_cap = get_component("capacitor_470uF")
+                    use_jst = True
+                else:
+                    actuator_comp = get_component("linear_actuator_12V")
+                    use_jst = False
+                    power_cap = None
+                
+                if not mosfet_comp or not actuator_comp:
                     continue
                 
                 # Create MOSFET
@@ -395,45 +472,131 @@ class GenerationService:
                 )
                 netlist.add_component(mosfet)
                 
-                # Create flyback diode
-                diode_ref = f"D{component_counter['D']}"
-                component_counter['D'] += 1
+                # Create gate series resistor (220Ω)
+                if gate_series_res:
+                    gate_res_ref = f"R{component_counter['R']}"
+                    component_counter['R'] += 1
+                    
+                    gate_resistor = Component(
+                        reference=gate_res_ref,
+                        value="220",
+                        footprint=gate_series_res.footprint,
+                        symbol=gate_series_res.symbol,
+                        x=25.0,
+                        y=40.0 + (i * 20.0)
+                    )
+                    netlist.add_component(gate_resistor)
                 
-                diode = Component(
-                    reference=diode_ref,
-                    value="1N4007",
-                    footprint=diode_comp.footprint,
-                    symbol=diode_comp.symbol,
-                    x=35.0,
-                    y=40.0 + (i * 20.0)
-                )
-                netlist.add_component(diode)
+                # Create gate pulldown resistor (100kΩ)
+                if gate_pulldown_res:
+                    pulldown_ref = f"R{component_counter['R']}"
+                    component_counter['R'] += 1
+                    
+                    pulldown_resistor = Component(
+                        reference=pulldown_ref,
+                        value="100k",
+                        footprint=gate_pulldown_res.footprint,
+                        symbol=gate_pulldown_res.symbol,
+                        x=27.0,
+                        y=42.0 + (i * 20.0)
+                    )
+                    netlist.add_component(pulldown_resistor)
+                
+                # Create flyback diode (only for inductive loads)
+                if diode_comp and not use_jst:
+                    diode_ref = f"D{component_counter['D']}"
+                    component_counter['D'] += 1
+                    
+                    diode = Component(
+                        reference=diode_ref,
+                        value="1N4007",
+                        footprint=diode_comp.footprint,
+                        symbol=diode_comp.symbol,
+                        x=35.0,
+                        y=40.0 + (i * 20.0)
+                    )
+                    netlist.add_component(diode)
+                
+                # Create power supply capacitor for LED strip
+                if power_cap and use_jst:
+                    cap_ref = f"C{component_counter.get('C', 1)}"
+                    component_counter['C'] = component_counter.get('C', 1) + 1
+                    
+                    power_capacitor = Component(
+                        reference=cap_ref,
+                        value="470uF",
+                        footprint=power_cap.footprint,
+                        symbol=power_cap.symbol,
+                        x=20.0,
+                        y=40.0 + (i * 20.0)
+                    )
+                    netlist.add_component(power_capacitor)
+                    
+                    # Connect power capacitor
+                    if actuator.supply_voltage == 5.0:
+                        netlist.connect("VCC", cap_ref, "1")
+                    else:
+                        netlist.connect("VIN_12V", cap_ref, "1")
+                    netlist.connect("GND", cap_ref, "2")
                 
                 # Create actuator connector
                 act_ref = f"J{component_counter['J']}"
                 component_counter['J'] += 1
                 
-                actuator_connector = Component(
-                    reference=act_ref,
-                    value=f"Actuator_{i+1}",
-                    footprint=actuator_comp.footprint,
-                    symbol=actuator_comp.symbol,
-                    x=40.0,
-                    y=40.0 + (i * 20.0)
-                )
+                if use_jst and jst_comp:
+                    actuator_connector = Component(
+                        reference=act_ref,
+                        value=f"LED_STRIP_OUT_{i+1}",
+                        footprint=jst_comp.footprint,
+                        symbol=jst_comp.symbol,
+                        x=40.0,
+                        y=40.0 + (i * 20.0)
+                    )
+                else:
+                    actuator_connector = Component(
+                        reference=act_ref,
+                        value=f"Actuator_{i+1}",
+                        footprint=actuator_comp.footprint,
+                        symbol=actuator_comp.symbol,
+                        x=40.0,
+                        y=40.0 + (i * 20.0)
+                    )
                 netlist.add_component(actuator_connector)
                 
-                # Connect MOSFET driver circuit
-                netlist.connect(f"ACTUATOR{i+1}_CTRL", "U1", gpio_pin.number)
-                netlist.connect(f"ACTUATOR{i+1}_CTRL", mosfet_ref, "1")  # Gate
+                # Connect MOSFET driver circuit with gate resistors
+                netlist.connect(f"ACTUATOR{i+1}_GPIO", "U1", gpio_pin.number)
+                
+                if gate_series_res:
+                    # GPIO -> series resistor -> gate
+                    netlist.connect(f"ACTUATOR{i+1}_GPIO", gate_res_ref, "1")
+                    netlist.connect(f"ACTUATOR{i+1}_GATE", gate_res_ref, "2")
+                    netlist.connect(f"ACTUATOR{i+1}_GATE", mosfet_ref, "1")  # Gate
+                else:
+                    # Direct connection if no resistor
+                    netlist.connect(f"ACTUATOR{i+1}_GPIO", mosfet_ref, "1")  # Gate
+                
+                if gate_pulldown_res:
+                    # Gate pulldown to GND
+                    netlist.connect(f"ACTUATOR{i+1}_GATE", pulldown_ref, "1")
+                    netlist.connect("GND", pulldown_ref, "2")
+                
                 netlist.connect("GND", mosfet_ref, "3")  # Source
                 netlist.connect(f"ACTUATOR{i+1}_SWITCHED", mosfet_ref, "2")  # Drain
-                netlist.connect(f"ACTUATOR{i+1}_SWITCHED", act_ref, "2")  # Actuator -
-                netlist.connect("VIN_12V", act_ref, "1")  # Actuator +
+                netlist.connect(f"ACTUATOR{i+1}_SWITCHED", act_ref, "2")  # Load GND
                 
-                # Connect flyback diode (across actuator)
-                netlist.connect("VIN_12V", diode_ref, "2")  # Anode to +12V
-                netlist.connect(f"ACTUATOR{i+1}_SWITCHED", diode_ref, "1")  # Cathode to switched side
+                # Connect power based on voltage
+                if actuator.supply_voltage == 5.0:
+                    netlist.connect("VCC", act_ref, "1")  # Load +5V
+                else:
+                    netlist.connect("VIN_12V", act_ref, "1")  # Load +12V
+                
+                # Connect flyback diode (across actuator) for inductive loads
+                if diode_comp and not use_jst:
+                    if actuator.supply_voltage == 5.0:
+                        netlist.connect("VCC", diode_ref, "2")  # Anode to +5V
+                    else:
+                        netlist.connect("VIN_12V", diode_ref, "2")  # Anode to +12V
+                    netlist.connect(f"ACTUATOR{i+1}_SWITCHED", diode_ref, "1")  # Cathode to switched side
             
             elif actuator.driver_type == "relay":
                 # Add relay driver circuit
