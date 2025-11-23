@@ -32,12 +32,13 @@ REGOLE:
 
 COMPONENTI DISPONIBILI:
 - Servo: SG90 (5V, 500mA, PWM)
-- Sensori: IR/fotocellula, ultrasuoni (HC-SR04), temperatura, umidità
-- LED: rosso, verde, blu, giallo, bianco, bicolore rosso/verde
+- Sensori: IR/fotocellula, ultrasuoni (HC-SR04), temperatura, umidità, microfono MAX9814 (audio/voce)
+- LED: rosso, verde, blu, giallo, bianco, bicolore rosso/verde, LED strip RGB 5V (500mm, 3A)
 - Attuatori bassa potenza: servo, relè piccoli
-- Attuatori alta potenza: attuatori lineari 12V, motori DC, relè di potenza
+- Attuatori alta potenza: attuatori lineari 12V, motori DC, relè di potenza, LED strip RGB 5V (tramite MOSFET)
 - Driver: MOSFET logic-level (IRLZ44N), relè 12V
-- Alimentazione: morsettiere, regolatori 12V→5V
+- Passivi: resistori (220Ω, 330Ω, 100kΩ), condensatori (100nF, 470µF, 1000µF)
+- Connettori: morsettiere, JST-XH (2-pin, 3-pin), regolatori 12V→5V
 
 CIRCUITI MULTI-TENSIONE:
 Per circuiti con attuatori 12V, usa sempre:

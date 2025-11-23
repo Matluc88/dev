@@ -252,6 +252,152 @@ COMPONENT_CATALOG = {
             ComponentPin(number="3", name="GREEN", role=PinRole.SIGNAL_IN, current_ma=20),
         ]
     ),
+    
+    "MAX9814_microphone": Component(
+        id="MAX9814_microphone",
+        category=ComponentCategory.SENSOR,
+        name="MAX9814 Microphone Module",
+        symbol="Sensor:Microphone",
+        footprint="Connector:PinHeader_1x03_P2.54mm_Vertical",
+        description="MAX9814 microphone amplifier module with AGC and analog output",
+        width_mm=10.0,
+        height_mm=10.0,
+        typical_current_ma=3,
+        pins=[
+            ComponentPin(number="1", name="VCC", role=PinRole.POWER_IN, voltage_min=3.3, voltage_max=5.0, current_ma=3),
+            ComponentPin(number="2", name="GND", role=PinRole.GROUND),
+            ComponentPin(number="3", name="OUT", role=PinRole.SIGNAL_OUT),
+        ]
+    ),
+    
+    "LED_strip_5V": Component(
+        id="LED_strip_5V",
+        category=ComponentCategory.LED,
+        name="LED Strip RGB 5V",
+        symbol="Device:LED_Strip",
+        footprint="Connector:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical",
+        description="RGB LED Strip 5V, 500mm length, requires external 5V power",
+        width_mm=10.0,
+        height_mm=5.0,
+        typical_current_ma=3000,
+        pins=[
+            ComponentPin(number="1", name="+5V", role=PinRole.POWER_IN, voltage_min=5.0, voltage_max=5.0, current_ma=3000),
+            ComponentPin(number="2", name="GND", role=PinRole.GROUND),
+        ]
+    ),
+    
+    "resistor_220": Component(
+        id="resistor_220",
+        category=ComponentCategory.RESISTOR,
+        name="Resistor 220Ω",
+        symbol="Device:R",
+        footprint="Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal",
+        description="220 Ohm resistor for MOSFET gate series",
+        width_mm=10.16,
+        height_mm=2.5,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="~", role=PinRole.SIGNAL_IN),
+            ComponentPin(number="2", name="~", role=PinRole.SIGNAL_OUT),
+        ]
+    ),
+    
+    "resistor_100k": Component(
+        id="resistor_100k",
+        category=ComponentCategory.RESISTOR,
+        name="Resistor 100kΩ",
+        symbol="Device:R",
+        footprint="Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal",
+        description="100k Ohm resistor for MOSFET gate pulldown",
+        width_mm=10.16,
+        height_mm=2.5,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="~", role=PinRole.SIGNAL_IN),
+            ComponentPin(number="2", name="~", role=PinRole.SIGNAL_OUT),
+        ]
+    ),
+    
+    "capacitor_100nF": Component(
+        id="capacitor_100nF",
+        category=ComponentCategory.RESISTOR,
+        name="Capacitor 100nF",
+        symbol="Device:C",
+        footprint="Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm",
+        description="100nF ceramic capacitor for bypass/decoupling",
+        width_mm=5.0,
+        height_mm=2.5,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="~", role=PinRole.SIGNAL_IN),
+            ComponentPin(number="2", name="~", role=PinRole.GROUND),
+        ]
+    ),
+    
+    "capacitor_470uF": Component(
+        id="capacitor_470uF",
+        category=ComponentCategory.RESISTOR,
+        name="Capacitor 470µF",
+        symbol="Device:CP",
+        footprint="Capacitor_THT:CP_Radial_D8.0mm_P3.50mm",
+        description="470µF electrolytic capacitor for power supply filtering",
+        width_mm=8.0,
+        height_mm=11.5,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="+", role=PinRole.POWER_IN),
+            ComponentPin(number="2", name="-", role=PinRole.GROUND),
+        ]
+    ),
+    
+    "capacitor_1000uF": Component(
+        id="capacitor_1000uF",
+        category=ComponentCategory.RESISTOR,
+        name="Capacitor 1000µF",
+        symbol="Device:CP",
+        footprint="Capacitor_THT:CP_Radial_D10.0mm_P5.00mm",
+        description="1000µF electrolytic capacitor for power supply filtering",
+        width_mm=10.0,
+        height_mm=12.5,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="+", role=PinRole.POWER_IN),
+            ComponentPin(number="2", name="-", role=PinRole.GROUND),
+        ]
+    ),
+    
+    "JST_XH_2pin": Component(
+        id="JST_XH_2pin",
+        category=ComponentCategory.CONNECTOR,
+        name="JST-XH 2-pin Connector",
+        symbol="Connector:Conn_01x02_Pin",
+        footprint="Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical",
+        description="JST-XH 2-pin connector for LED strip output",
+        width_mm=5.0,
+        height_mm=7.0,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="Pin_1", role=PinRole.POWER_OUT),
+            ComponentPin(number="2", name="Pin_2", role=PinRole.GROUND),
+        ]
+    ),
+    
+    "JST_XH_3pin": Component(
+        id="JST_XH_3pin",
+        category=ComponentCategory.CONNECTOR,
+        name="JST-XH 3-pin Connector",
+        symbol="Connector:Conn_01x03_Pin",
+        footprint="Connector_JST:JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical",
+        description="JST-XH 3-pin connector for microphone input",
+        width_mm=7.5,
+        height_mm=7.0,
+        typical_current_ma=0,
+        pins=[
+            ComponentPin(number="1", name="Pin_1", role=PinRole.POWER_IN),
+            ComponentPin(number="2", name="Pin_2", role=PinRole.GROUND),
+            ComponentPin(number="3", name="Pin_3", role=PinRole.SIGNAL_IN),
+        ]
+    ),
 }
 
 

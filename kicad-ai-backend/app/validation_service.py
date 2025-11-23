@@ -63,6 +63,21 @@ class ValidationService:
                         ultrasonic = get_component("ultrasonic_sensor")
                         if ultrasonic:
                             self.total_current_ma += ultrasonic.typical_current_ma
+                
+                elif sensor.kind in ["microphone", "microfono", "audio", "MAX9814"]:
+                    pin = self._assign_gpio_pin(esp32, f"Microfono {i+1}-{j+1}")
+                    if not pin:
+                        errors.append(f"Pin GPIO insufficienti per microfono {i+1}-{j+1}")
+                    else:
+                        mic = get_component("MAX9814_microphone")
+                        if mic:
+                            self.total_current_ma += mic.typical_current_ma
+                        # Warn if not using ADC-capable pin
+                        if pin.name not in ["IO34", "IO35", "IO36", "VP", "VN"]:
+                            warnings.append(
+                                f"Microfono {i+1}-{j+1} assegnato a {pin.name} che non è un pin ADC dedicato. "
+                                f"Considera di usare GPIO34, GPIO35 o GPIO36 per lettura analogica ottimale."
+                            )
         
         # Validate LEDs (need GPIO pins)
         for i, led in enumerate(spec.status_leds):
